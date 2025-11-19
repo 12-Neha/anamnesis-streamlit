@@ -47,8 +47,26 @@ https://anamnesis-app-hzggt2wqtaeajcteymjvfa.streamlit.app/
 
 ## 📂 Project Structure
 
-```text
-├── app.py              # Streamlit UI
-├── llm.py              # Capsule generation + LLM logic
-├── requirements.txt    # Dependencies
-└── README.md
+    app.py              # Streamlit UI
+    llm.py              # Capsule generation + LLM logic
+    requirements.txt    # Dependencies
+    README.md
+
+---
+
+## 🔮 Future Enhancements
+
+📅 Spaced repetition scheduling  
+⭐ Difficulty-based review system  
+📊 Progress tracking  
+🧠 Semantic answer evaluation  
+🏷 Topic tagging  
+
+---
+
+## ✍️ Author
+
+**Neha Alagi**  
+Product-minded Analyst & AI Builder  
+🔗 LinkedIn: https://linkedin.com/in/nehaalagi
+
