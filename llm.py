@@ -1,128 +1,142 @@
 # llm.py
 import os
+import json
+from datetime import datetime
 from openai import OpenAI
 
-# Read the API key stored in Replit Secrets
-import os
-from openai import OpenAI
-
-# Try environment variable first (for Replit/local)
+# ================================
+#  API KEY HANDLING
+# ================================
 api_key = os.getenv("OPENAI_API_KEY")
 
-# Fallback: try Streamlit secrets (for Streamlit Cloud)
+# Fallback for Streamlit Cloud
 if not api_key:
     try:
         import streamlit as st
         api_key = st.secrets["OPENAI_API_KEY"]
     except Exception:
         raise ValueError(
-            "OPENAI_API_KEY not found. Set it as an env var (Replit/local) "
-            "or in Streamlit secrets."
+            "OPENAI_API_KEY not found. Set it in Replit secrets or Streamlit secrets."
         )
 
 client = OpenAI(api_key=api_key)
-if not api_key:
-    raise ValueError("OPENAI_API_KEY not set in Replit Secrets.")
-
-client = OpenAI(api_key=api_key)
 
 
+# ================================
+#  MONTHLY USAGE LIMIT PROTECTION
+# ================================
+USAGE_LIMIT = 200     # ≈ $1–$2 per month on gpt-4.1-mini
+USAGE_FILE = "usage_counter.txt"
+
+
+def check_usage_limit():
+    """Protects you from unwanted API overuse."""
+    if not os.path.exists(USAGE_FILE):
+        with open(USAGE_FILE, "w") as f:
+            f.write("0")
+
+    # Read current usage
+    with open(USAGE_FILE, "r") as f:
+        count = int(f.read().strip())
+
+    if count >= USAGE_LIMIT:
+        raise ValueError(
+            "⚠️ Monthly usage limit reached. "
+            "This prevents accidental API overcharges. "
+            "Try again next month or increase the limit in llm.py."
+        )
+
+    # Increment usage count
+    with open(USAGE_FILE, "w") as f:
+        f.write(str(count + 1))
+
+
+# ================================
+#  CAPSULE GENERATOR
+# ================================
 def generate_capsule_simple(mode: str,
                             roles: list[str],
                             course_topic: str | None = None) -> dict:
     """
-    Anamnesis capsule generator (MVP).
-
-    Parameters
-    ----------
-    mode : str
-        One of: "career", "course", "mix"
-    roles : list[str]
-        Target roles like ["Product Manager", "Supply Chain"]
-    course_topic : str | None
-        Optional string describing the course & topic to review,
-        e.g. "Operations Management — Little's Law"
-
-    Returns
-    -------
-    dict
-        {
-          "concept": str,
-          "questions": [
-            {"question": str, "expected_answer": str},
-            ...
-          ]
-        }
+    Generates concept capsules & quiz questions using GPT-4.1-mini.
+    Falls back to GPT-3.5-turbo if needed.
     """
+    # Enforce usage limit
+    check_usage_limit()
+
     roles_text = ", ".join(roles) if roles else "Product Manager"
     course_topic_text = course_topic or "none specified"
 
+    # ----- SYSTEM PROMPT -----
     system_prompt = """
 You are Anamnesis AI — a personal learning and memory co-pilot.
 
-Your goal is to help the user *remember* and *apply* key concepts for roles
-like Product Manager, Supply Chain Analyst, TPM, and Analytics, and to refresh
-topics from courses they've already taken.
-
-You must:
+Your job:
 - Explain ONE concept clearly and briefly.
-- Generate TWO quiz questions about it, with short expected answers.
-- Keep it practical and beginner-friendly.
-- Focus on understanding and recall, not heavy math.
+- Generate TWO quiz questions.
+- Keep responses simple, practical, and recall-friendly.
 
-CRITICAL:
-Return ONLY valid JSON with keys:
-- "concept": str
-- "questions": list of { "question": str, "expected_answer": str }
-    """
+Return ONLY valid JSON like:
+{
+  "concept": "...",
+  "questions": [
+    {"question": "...", "expected_answer": "..."}
+  ]
+}
+"""
 
+    # ----- USER PROMPT -----
     user_prompt = f"""
 User target roles: {roles_text}
 Mode: {mode}
-Selected course/topic for review (if any): {course_topic_text}
+Selected course/topic: {course_topic_text}
 
-If mode is "career":
-- Focus on a concept that is important for their target roles.
+Rules:
+- If mode="career": pick a concept useful for their target roles.
+- If mode="course": refresh the given course/topic.
+- If mode="mix": pick something relevant to both career and course review.
+"""
 
-If mode is "course":
-- Focus on the given course/topic for review.
-- Assume they have seen this concept before in a course and need a refresher.
-- Emphasize recall and practical intuition.
+    # ================================
+    #  PRIMARY MODEL: GPT-4.1-MINI
+    # ================================
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_prompt.strip()},
+                {"role": "user", "content": user_prompt.strip()},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+        )
 
-If mode is "mix":
-- Choose a concept that is relevant both for their roles and as something
-  that could reasonably come from a course.
+    # ================================
+    #  FALLBACK MODEL: GPT-3.5-TURBO
+    # ================================
+    except Exception as e:
+        print("⚠️ Warning: gpt-4.1-mini failed, falling back to gpt-3.5-turbo.\n", e)
 
-Keep everything short and clear.
-    """
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt.strip()},
+                {"role": "user", "content": user_prompt.strip()},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+        )
 
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt.strip()
-            },
-            {
-                "role": "user",
-                "content": user_prompt.strip()
-            },
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.7,
-    )
-
-    import json
     return json.loads(response.choices[0].message.content)
 
 
+# ================================
+#  QUIZ EVALUATOR (simple keyword match)
+# ================================
 def evaluate_answer_simple(user_answer: str, expected_answer: str) -> bool:
     """
-    Very naive first-pass evaluation:
-    - lowercase both
-    - check if at least one keyword from expected answer appears in user answer
-
-    This is just an MVP; later we can replace it with a smarter LLM-based grading.
+    Simple keyword-overlap evaluation.
+    (We can upgrade this to an LLM evaluator later.)
     """
     if not user_answer or not expected_answer:
         return False
@@ -131,8 +145,11 @@ def evaluate_answer_simple(user_answer: str, expected_answer: str) -> bool:
     expected = expected_answer.lower()
 
     tokens = [t for t in expected.split() if len(t) > 3]
+
     if not tokens:
         return False
 
     match_count = sum(1 for t in tokens if t in user)
+
     return match_count >= 1
+
