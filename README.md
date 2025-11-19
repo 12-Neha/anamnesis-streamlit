@@ -1,11 +1,12 @@
 ✨ Anamnesis — AI Learning & Memory Co-Pilot
 
 Anamnesis is an AI-powered learning companion that helps users learn faster, remember longer, and practice smarter.
-It generates concise concept capsules, personalized quiz questions, and adaptive reviews for roles like Product Manager, Supply Chain Analyst, Data Analyst, and TPM.
+It generates concise concept capsules, personalized quiz questions, and adaptive refreshers for roles like Product Manager, Supply Chain Analyst, Data Analyst, and TPM.
 
-🌱 Demo Site
+🌐 Demo
 
-👉 https://anamnesis-app-hzggt2wqtaeajcteymjvfa.streamlit.app/
+🔗 Live App:
+https://anamnesis-app-hzggt2wqtaeajcteymjvfa.streamlit.app/
 
 🚀 Features
 📘 Concept Capsules
@@ -18,7 +19,7 @@ Useful for interview prep, coursework review, and skill refresh
 
 ❓ Smart Quiz Questions
 
-Two questions generated per concept
+Two concept-specific questions
 
 Includes expected answers for self-checking
 
@@ -38,13 +39,7 @@ Primary model: GPT-4.1-mini
 
 Automatic fallback: GPT-3.5-turbo
 
-Built-in usage limit to prevent credit exhaustion
-
-🔐 Secure Key Handling
-
-Works in both Replit and Streamlit Cloud
-
-Loads OPENAI_API_KEY from env variables or streamlit secrets
+Built-in credit usage limit for safety
 
 🛠 Tech Stack
 
@@ -54,7 +49,7 @@ Streamlit (UI)
 
 OpenAI API
 
-Replit (dev)
+Replit (development)
 
 Streamlit Cloud (deployment)
 
@@ -65,29 +60,34 @@ Streamlit Cloud (deployment)
 ├── .streamlit/         # Secrets template
 └── README.md
 
-📦 Installation (for local development)
+🔧 Local Setup
+
+Install dependencies:
 pip install -r requirements.txt
+
+Run locally:
+
 streamlit run app.py
 
 
-Set your environment variable:
+Set your API key:
 
 export OPENAI_API_KEY="your_api_key_here"
 
-✨ Future Enhancements (Upcoming)
+🔮 Future Enhancements
 
 📅 Spaced repetition scheduling
 
-⭐ Difficulty-based review queue
+⭐ Difficulty-based review system
 
-📊 Progress tracking dashboard
+📊 Progress & streak tracking
 
-🧠 Smarter answer evaluation (semantic scoring)
+🧠 Semantic answer evaluation
 
 🏷 Topic tagging + personalized learning paths
 
-👩🏻‍💻 Author
+✍️ Author
 
 Neha Alagi
-Product-minded Analyst | AI Builder
-LinkedIn: https://linkedin.com/in/nehaalagi
+Product-minded Analyst & AI Builder
+💼 LinkedIn: https://linkedin.com/in/nehaalagi
